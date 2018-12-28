@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>标题</title>
+	<meta name="keywords" content="">
+	<meta name="description" content="">
+
+	<script type="text/javascript" src="./js/vue.min.js"></script>
+	<script type="text/javascript" src="./js/jquery-3.1.1.min.js"></script>
+    <script type="text/javascript" src="../dist/Ife.js"></script>
+</head>
+<body>
+	<div id="main_con">
+		<iframe src="" id="ife"></iframe>
+	</div>
+
+    <script type="text/javascript">
+		var ife = new Ife({
+			el: '#ife',
+			data: {
+				a: 1
+			}
+		})
+    </script>
+</body>
+</html>
