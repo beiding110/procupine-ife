@@ -11206,19 +11206,14 @@ Router.prototype = {
                 that.hashHandler(path, 'replace');
             }
         };
-        
+
         this.$route = {};
 
         this.routeHandler(window.location);
         this.initRouteObserver();
     },
     hashHandler(obj, type) {
-        var newUrl = '#'
-        if(typeof(obj) === 'object') {
-            newUrl += object.path;
-        } else {
-            newUrl += obj;
-        }
+        var newUrl = this.urlBuilder(obj);
 
         var swicthObj = {
             push() {
@@ -11233,7 +11228,6 @@ Router.prototype = {
     },
     initRouteObserver() {
         window.addEventListener('hashchange', (e) => {
-            console.log(e)
             this.routeHandler(e);
         })
     },
@@ -11249,6 +11243,31 @@ Router.prototype = {
         this.$route.fullPath = newUrl;
 
         this.frameWin.location.replace(newUrl);
+    },
+    urlBuilder(obj) {
+        var newUrl = '#',
+            currentFullPath = window.location.pathname;
+
+        var currPathArr = currentFullPath.split('/');
+
+        if(typeof(obj) === 'object') {
+            newPath = object.path;
+        } else {
+            newPath = obj;
+        };
+
+        if(/^.\//.test(newPath)) {
+            relative_path = currPathArr.slice(0, -1);
+            relative_path.push(newPath.replace('./', ''));
+        } else if (/^\//.test(newPath)) {
+            relative_path = [newPath];
+        } 
+        // else if (/^..\//.test(newPath)) {
+        //
+        // }
+
+        newUrl += relative_path.join('/');
+        return newUrl;
     }
 }
 
