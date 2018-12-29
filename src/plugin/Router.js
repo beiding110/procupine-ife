@@ -6,7 +6,6 @@ Router.prototype = {
     init(obj) {
         var that = this;
         this.route = obj.route;
-        this.frameWin = document.querySelector(obj.el).contentWindow;
 
         this.$router = {
             push(path) {
@@ -17,7 +16,9 @@ Router.prototype = {
             }
         };
 
-        this.$route = {};
+        this.$route = {
+            frameWin: document.querySelector(obj.el).contentWindow
+        };
 
         this.routeHandler(window.location);
         this.initRouteObserver();
@@ -27,10 +28,10 @@ Router.prototype = {
 
         var swicthObj = {
             push() {
-                window.location.assign('' + newUrl);
+                window.top.location.assign('' + newUrl);
             },
             replace() {
-                window.location.replace('' + newUrl);
+                window.top.location.replace('' + newUrl);
             }
         };
 
@@ -52,7 +53,9 @@ Router.prototype = {
 
         this.$route.fullPath = newUrl;
 
-        this.frameWin.location.replace(newUrl);
+        newUrl = newUrl + (this.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
+
+        this.$route.frameWin.location.replace(newUrl);
     },
     urlBuilder(obj) {
         var newUrl = '#',
@@ -61,23 +64,34 @@ Router.prototype = {
         var currPathArr = currentFullPath.split('/');
 
         if(typeof(obj) === 'object') {
-            newPath = object.path;
+            newPath = obj.path;
+            var search = '';
+
+            Object.keys(obj.search).forEach(function(key, item) {
+                search += '&' + key + '=' + obj.search[key];
+            });
+
+            newPath = newPath + (this.urlHasSearch(newPath) ? search : ('?' + search.substring(1)));
         } else {
             newPath = obj;
         };
 
-        if(/^.\//.test(newPath)) {
+        if (/^\//.test(newPath)) {
+            relative_path = [newPath];
+        } else if(/^(\.\/)/.test(newPath)) {
             relative_path = currPathArr.slice(0, -1);
             relative_path.push(newPath.replace('./', ''));
-        } else if (/^\//.test(newPath)) {
-            relative_path = [newPath];
-        } 
-        // else if (/^..\//.test(newPath)) {
-        //
-        // }
+        } else if (/^(\.\.\/)/.test(newPath)) {
+            var matched_number = newPath.match(/(\.\.\/)/g).length;
+            relative_path = currPathArr.slice(0, -(matched_number));
+            relative_path.push(newPath.replace(/(\.\.\/)/g, ''));
+        }
 
         newUrl += relative_path.join('/');
         return newUrl;
+    },
+    urlHasSearch(url) {
+        return /^[^\?=&!]+\?/g.test(url)
     }
 }
 

@@ -20,8 +20,13 @@
 			el: '#ife',
 			data: {
 				a: 1
+			},
+			watch: {
+				a(n, o) {
+					console.log(n, o)
+				}
 			}
-		})
+		});
     </script>
 </body>
 </html>
