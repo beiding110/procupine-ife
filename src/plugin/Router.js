@@ -1,3 +1,5 @@
+var RouteBreaker = require('./RouteBreaker')
+
 function Router(obj) {
     this.init(obj);
 };
@@ -17,7 +19,7 @@ Router.prototype = {
         };
 
         this.$route = {
-            frameWin: document.querySelector(obj.el).contentWindow
+            $win: document.querySelector(obj.el).contentWindow
         };
 
         this.routeHandler(window.location);
@@ -51,11 +53,14 @@ Router.prototype = {
             newUrl = new URL(obj.newURL).hash.replace('#', '');
         };
 
-        this.$route.fullPath = newUrl;
+        var newRt = new RouteBreaker(newUrl);
+        this.$route.fullPath = newRt.fullPath;
+        this.$route.query = newRt.query;
+        this.$route.path = newRt.path;
 
         newUrl = newUrl + (this.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
 
-        this.$route.frameWin.location.replace(newUrl);
+        this.$route.$win.location.replace(newUrl);
     },
     urlBuilder(obj) {
         var newUrl = '#',

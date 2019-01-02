@@ -11274,12 +11274,51 @@ module.exports = {
 
 /***/ }),
 
+/***/ "./src/plugin/RouteBreaker.js":
+/*!************************************!*\
+  !*** ./src/plugin/RouteBreaker.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function RouteBreaker(path) {
+    this.init(path)
+}
+
+RouteBreaker.prototype = {
+    init(path) {
+        var breakArr = path.split('?'),
+            queryStr = '',
+            queryArr = [],
+            query = {};
+
+        this.fullPath = path;
+        this.path = breakArr[0];
+
+        queryStr = breakArr[1];
+        queryArr = queryStr.split('&');
+        queryArr.forEach(function(item) {
+            var arr = item.split('=');
+            query[arr[0]] = arr[1];
+        });
+
+        this.query = query;
+    }
+}
+
+module.exports = RouteBreaker
+
+
+/***/ }),
+
 /***/ "./src/plugin/Router.js":
 /*!******************************!*\
   !*** ./src/plugin/Router.js ***!
   \******************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+var RouteBreaker = __webpack_require__(/*! ./RouteBreaker */ "./src/plugin/RouteBreaker.js")
 
 function Router(obj) {
     this.init(obj);
@@ -11300,7 +11339,7 @@ Router.prototype = {
         };
 
         this.$route = {
-            frameWin: document.querySelector(obj.el).contentWindow
+            $win: document.querySelector(obj.el).contentWindow
         };
 
         this.routeHandler(window.location);
@@ -11334,11 +11373,14 @@ Router.prototype = {
             newUrl = new URL(obj.newURL).hash.replace('#', '');
         };
 
-        this.$route.fullPath = newUrl;
+        var newRt = new RouteBreaker(newUrl);
+        this.$route.fullPath = newRt.fullPath;
+        this.$route.query = newRt.query;
+        this.$route.path = newRt.path;
 
         newUrl = newUrl + (this.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
 
-        this.$route.frameWin.location.replace(newUrl);
+        this.$route.$win.location.replace(newUrl);
     },
     urlBuilder(obj) {
         var newUrl = '#',
