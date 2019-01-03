@@ -11159,9 +11159,7 @@ Ife.prototype = {
             if(obj.el) {
                 route = new Router(this.$setting);
 
-                this.$router = route.$router;
-                this.$route = route.$route;
-                this.$win = route.$win;
+                _.scrollin(route, this);
             }
 
             this.initObserve(this.$data);
@@ -11181,10 +11179,10 @@ Ife.prototype = {
 
         this.$watch = _.mixin(top.$watch, obj.watch);
 
-        if(top.el) {
+        if(top.$win) {
             this.$router = top.$router;
             this.$route = top.$route;
-        }
+        };
 
         this.initStorageEventCatcher();
 
@@ -11334,6 +11332,15 @@ module.exports = {
 
         return to;
     },
+    scrollin(from, to, cover) {
+        Object.keys(from).forEach(function(key, index) {
+            if(!cover) {
+                to[key] = to[key] ? to[key] : from[key];
+            } else {
+                to[key] = from[key];
+            }
+        });
+    },
     Chain
 }
 
@@ -11345,32 +11352,51 @@ module.exports = {
   !*** ./src/plugin/RouteBreaker.js ***!
   \************************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-function RouteBreaker(path) {
-    this.init(path)
+var _ = __webpack_require__(/*! ../lib/pro_tool */ "./src/lib/pro_tool.js")
+
+function RouteBreaker(path, routers) {
+    this.init(path, routers)
 }
 
 RouteBreaker.prototype = {
-    init(path) {
-        var breakArr = path.split('?'),
-            queryStr = '',
-            queryArr = [],
-            query = {};
+    init(path, routers) {
+        var breakArr = path.split('?');
 
         this.fullPath = path;
         this.path = breakArr[0];
+        this.query = this.queryBuilder(breakArr[1]);
 
-        if(breakArr[1]) {
-            queryStr = breakArr[1];
+        this.routerMapper(this.path, routers)
+    },
+
+    queryBuilder(str) {
+        var queryStr = '',
+            queryArr = [],
+            query = {};
+
+        if(str) {
+            queryStr = str;
             queryArr = queryStr.split('&');
             queryArr.forEach(function(item) {
                 var arr = item.split('=');
                 query[arr[0]] = arr[1];
             });
-        }
+        };
 
-        this.query = query;
+        return query;
+    },
+
+    routerMapper(path, routers) {
+        if(routers) {
+            var routeItem = routers[this.path];
+            if(!routeItem) {
+                console.error('无法获取到对应的页面，请确认该路由路径与页面正确匹配！');
+            } else {
+                _.scrollin(routeItem, this);
+            }
+        }
     }
 }
 
@@ -11396,7 +11422,8 @@ function Router(obj) {
 Router.prototype = {
     init(obj) {
         var that = this;
-        this.routes = obj.routes;
+        this.routes = this.routesPretreatment(obj.routes);
+
         this.beforeEach = obj.beforeEach;
         this.afterEach = obj.afterEach;
 
@@ -11408,17 +11435,20 @@ Router.prototype = {
                 that.hashHandler(path, 'replace');
             },
             reload() {
-                that.routeHandler(window.location);
+                that.hashHandler(null, 'reload');
             }
         };
 
         this.$win = document.querySelector(obj.el).contentWindow;
 
-        this.routeHandler(window.location);
+        if(!window.location.hash) this.$router.replace('/');
+        else this.routeHandler(window.location);
+
         this.initRouteObserver();
     },
     hashHandler(obj, type) {
-        var newUrl = this.urlBuilder(obj);
+        var newUrl = obj ? this.urlBuilder(obj) : '',
+            that = this;
 
         var swicthObj = {
             push() {
@@ -11426,6 +11456,9 @@ Router.prototype = {
             },
             replace() {
                 window.top.location.replace('' + newUrl);
+            },
+            reload() {
+                that.$win.location.reload();
             }
         };
 
@@ -11437,7 +11470,12 @@ Router.prototype = {
         })
     },
     routeHandler(obj) {
-        var oldUrl = '', newURL = '', srcUrl = '';
+        var oldUrl = '',
+            newURL = '',
+            srcUrl = '',
+            toRoute = {},
+            fromRoute = {};
+
         (new _.Chain()).link(function(that, next) {
             if(obj instanceof Location) {
                 oldUrl =  newUrl = obj.hash.replace('#', '');
@@ -11446,23 +11484,27 @@ Router.prototype = {
                 newUrl = new URL(obj.newURL).hash.replace('#', '');
             };
 
-            srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
+            toRoute = new RouteBreaker(newUrl, that.routes),
+            fromRoute = new RouteBreaker(oldUrl, that.routes);
+
+            newUrl = that.routes ? toRoute.component : newUrl;
 
             if(newUrl) {
                 next();
-            }
+            };
         }).link(function(that, next) {
             if(that.beforeEach) {
-                that.beforeEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
+                that.beforeEach(toRoute, fromRoute, next);
             }else {
                 next();
             }
         }).link(function(that, next) {
+            srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
             that.$win.location.replace(srcUrl);
 
             next();
         }).link(function(that, next) {
-            var newRt = new RouteBreaker(newUrl);
+            var newRt = toRoute;
             that.$route = {
                 fullPath: newRt.fullPath,
                 query: newRt.query,
@@ -11472,16 +11514,12 @@ Router.prototype = {
             next();
         }).link(function(that, next) {
             if(that.afterEach) {
-                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl));
+                that.afterEach(toRoute, fromRoute);
             }
         }).run(this);
     },
     urlBuilder(obj) {
-        var newUrl = '#',
-            newPath = '',
-            currentFullPath = window.location.hash.substring(1);
-
-        var currPathArr = currentFullPath.split('/');
+        var newPath = ''
 
         if(typeof(obj) === 'object') {
             newPath = obj.path;
@@ -11498,6 +11536,14 @@ Router.prototype = {
             newPath = obj;
         };
 
+        return this.urlRATestBuilder(newPath);
+    },
+    urlRATestBuilder(newPath) {
+        var newUrl = '#',
+            currentFullPath = window.location.hash.substring(1),
+            currPathArr = currentFullPath.split('/'),
+            relative_path = null;
+
         if (/^\//.test(newPath)) {
             relative_path = [newPath];
         } else if (/^(\.\.\/)/.test(newPath)) {
@@ -11511,10 +11557,39 @@ Router.prototype = {
         }
 
         newUrl += relative_path.join('/');
+
         return newUrl;
     },
     urlHasSearch(url) {
         return /^[^\?=&!]+\?/g.test(url)
+    },
+    routesPretreatment(routes) {
+        if(!routes) return false;
+
+        var res = {},
+            parentPath = '';
+
+        function deepLoop(arr) {
+            arr.forEach(function(item) {
+                var path = item.path;
+                parentPath = /^\//.test(path) ? path : (parentPath + '/' + path);
+
+                if(item.children && item.children.length > 0) {
+                    deepLoop(item.children);
+                } else {
+                    res[parentPath] = item;
+                    parentPath = '';
+                };
+            })
+        };
+
+        if(Array.isArray(routes)) {
+            deepLoop(routes)
+        } else if (typeof(routes) === 'object') {
+            deepLoop([routes])
+        }
+
+        return res;
     }
 }
 

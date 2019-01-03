@@ -15,9 +15,7 @@ Ife.prototype = {
             if(obj.el) {
                 route = new Router(this.$setting);
 
-                this.$router = route.$router;
-                this.$route = route.$route;
-                this.$win = route.$win;
+                _.scrollin(route, this);
             }
 
             this.initObserve(this.$data);
@@ -37,10 +35,10 @@ Ife.prototype = {
 
         this.$watch = _.mixin(top.$watch, obj.watch);
 
-        if(top.el) {
+        if(top.$win) {
             this.$router = top.$router;
             this.$route = top.$route;
-        }
+        };
 
         this.initStorageEventCatcher();
 

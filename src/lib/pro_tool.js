@@ -14,5 +14,14 @@ module.exports = {
 
         return to;
     },
+    scrollin(from, to, cover) {
+        Object.keys(from).forEach(function(key, index) {
+            if(!cover) {
+                to[key] = to[key] ? to[key] : from[key];
+            } else {
+                to[key] = from[key];
+            }
+        });
+    },
     Chain
 }

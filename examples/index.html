@@ -27,13 +27,41 @@
 				}
 			},
 			mounted() {
-				this.$router.replace('/examples/sub/frame-1.html');
+				// this.$router.replace('/examples/sub/frame-1.html');
 			},
 			beforeEach(to, from, cb) {
 				console.log(to, from)
-				document.title = to.path;
+				// document.title = to.path;
+				document.title = to.meta.title;
 				cb()
-			}
+			},
+			routes: [
+				{
+					path: '/test',
+					children: [
+						{
+							path: 'frame1',
+							component: '/examples/sub/frame-1.html',
+							meta: {
+								title: 'frame1Title'
+							}
+						}, {
+							path: '/frame2',
+							component: '/examples/sub/frame-2.html',
+							meta: {
+								title: 'frame2Title'
+							}
+						}
+					]
+				},
+				{
+					path: '/',
+					component: '/examples/sub/404.html',
+					meta: {
+						title: '404'
+					}
+				}
+			]
 		});
     </script>
 </body>
