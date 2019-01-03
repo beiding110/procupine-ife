@@ -12,11 +12,13 @@ Ife.prototype = {
             this.$data = obj.data; //data中的数据用于全页面共享
             this.$watch = obj.watch;
 
-            route = new Router(this.$setting);
+            if(obj.el) {
+                route = new Router(this.$setting);
 
-            this.$router = route.$router;
-            this.$route = route.$route;
-            this.$win = route.$win;
+                this.$router = route.$router;
+                this.$route = route.$route;
+                this.$win = route.$win;
+            }
 
             this.initObserve(this.$data);
             this.initStorageEventCatcher();
@@ -35,8 +37,10 @@ Ife.prototype = {
 
         this.$watch = _.mixin(top.$watch, obj.watch);
 
-        this.$router = top.$router;
-        this.$route = top.$route;
+        if(top.el) {
+            this.$router = top.$router;
+            this.$route = top.$route;
+        }
 
         this.initStorageEventCatcher();
 

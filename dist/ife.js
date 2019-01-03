@@ -11156,11 +11156,13 @@ Ife.prototype = {
             this.$data = obj.data; //data中的数据用于全页面共享
             this.$watch = obj.watch;
 
-            route = new Router(this.$setting);
+            if(obj.el) {
+                route = new Router(this.$setting);
 
-            this.$router = route.$router;
-            this.$route = route.$route;
-            this.$win = route.$win;
+                this.$router = route.$router;
+                this.$route = route.$route;
+                this.$win = route.$win;
+            }
 
             this.initObserve(this.$data);
             this.initStorageEventCatcher();
@@ -11179,8 +11181,10 @@ Ife.prototype = {
 
         this.$watch = _.mixin(top.$watch, obj.watch);
 
-        this.$router = top.$router;
-        this.$route = top.$route;
+        if(top.el) {
+            this.$router = top.$router;
+            this.$route = top.$route;
+        }
 
         this.initStorageEventCatcher();
 
@@ -11408,11 +11412,6 @@ Router.prototype = {
             }
         };
 
-        // this.beforeEach = function(o, n, c) {
-        //     console.log(o, n)
-        //     c()
-        // }
-
         this.$win = document.querySelector(obj.el).contentWindow;
 
         this.routeHandler(window.location);
@@ -11449,7 +11448,9 @@ Router.prototype = {
 
             srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
 
-            next();
+            if(newUrl) {
+                next();
+            }
         }).link(function(that, next) {
             if(that.beforeEach) {
                 that.beforeEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
@@ -11471,9 +11472,7 @@ Router.prototype = {
             next();
         }).link(function(that, next) {
             if(that.afterEach) {
-                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
-            }else {
-                next();
+                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl));
             }
         }).run(this);
     },

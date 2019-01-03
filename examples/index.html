@@ -26,6 +26,9 @@
 					console.log(n, o)
 				}
 			},
+			mounted() {
+				this.$router.replace('/examples/sub/frame-1.html');
+			},
 			beforeEach(to, from, cb) {
 				console.log(to, from)
 				document.title = to.path;

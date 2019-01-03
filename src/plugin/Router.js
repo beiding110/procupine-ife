@@ -24,11 +24,6 @@ Router.prototype = {
             }
         };
 
-        // this.beforeEach = function(o, n, c) {
-        //     console.log(o, n)
-        //     c()
-        // }
-
         this.$win = document.querySelector(obj.el).contentWindow;
 
         this.routeHandler(window.location);
@@ -65,7 +60,9 @@ Router.prototype = {
 
             srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
 
-            next();
+            if(newUrl) {
+                next();
+            }
         }).link(function(that, next) {
             if(that.beforeEach) {
                 that.beforeEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
@@ -87,9 +84,7 @@ Router.prototype = {
             next();
         }).link(function(that, next) {
             if(that.afterEach) {
-                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
-            }else {
-                next();
+                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl));
             }
         }).run(this);
     },
