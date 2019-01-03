@@ -25,6 +25,11 @@
 				a(n, o) {
 					console.log(n, o)
 				}
+			},
+			beforeEach(to, from, cb) {
+				console.log(to, from)
+				document.title = to.path;
+				cb()
 			}
 		});
     </script>

@@ -1,3 +1,5 @@
+var Chain = require('./Chain')
+
 module.exports = {
     mixin(from, to, cover) {
         from = JSON.parse(JSON.stringify(from || {}));
@@ -11,5 +13,6 @@ module.exports = {
         });
 
         return to;
-    }
+    },
+    Chain
 }

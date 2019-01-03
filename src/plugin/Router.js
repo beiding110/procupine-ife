@@ -1,4 +1,5 @@
 var RouteBreaker = require('./RouteBreaker')
+var _ = require('../lib/pro_tool')
 
 function Router(obj) {
     this.init(obj);
@@ -7,7 +8,9 @@ function Router(obj) {
 Router.prototype = {
     init(obj) {
         var that = this;
-        this.route = obj.route;
+        this.routes = obj.routes;
+        this.beforeEach = obj.beforeEach;
+        this.afterEach = obj.afterEach;
 
         this.$router = {
             push(path) {
@@ -15,12 +18,18 @@ Router.prototype = {
             },
             replace(path) {
                 that.hashHandler(path, 'replace');
+            },
+            reload() {
+                that.routeHandler(window.location);
             }
         };
 
-        this.$route = {
-            $win: document.querySelector(obj.el).contentWindow
-        };
+        // this.beforeEach = function(o, n, c) {
+        //     console.log(o, n)
+        //     c()
+        // }
+
+        this.$win = document.querySelector(obj.el).contentWindow;
 
         this.routeHandler(window.location);
         this.initRouteObserver();
@@ -45,26 +54,49 @@ Router.prototype = {
         })
     },
     routeHandler(obj) {
-        var oldUrl = '', newURL;
-        if(obj instanceof Location) {
-            newUrl = obj.hash.replace('#', '');
-        } else {
-            oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
-            newUrl = new URL(obj.newURL).hash.replace('#', '');
-        };
+        var oldUrl = '', newURL = '', srcUrl = '';
+        (new _.Chain()).link(function(that, next) {
+            if(obj instanceof Location) {
+                oldUrl =  newUrl = obj.hash.replace('#', '');
+            } else {
+                oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
+                newUrl = new URL(obj.newURL).hash.replace('#', '');
+            };
 
-        var newRt = new RouteBreaker(newUrl);
-        this.$route.fullPath = newRt.fullPath;
-        this.$route.query = newRt.query;
-        this.$route.path = newRt.path;
+            srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
 
-        newUrl = newUrl + (this.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
+            next();
+        }).link(function(that, next) {
+            if(that.beforeEach) {
+                that.beforeEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
+            }else {
+                next();
+            }
+        }).link(function(that, next) {
+            that.$win.location.replace(srcUrl);
 
-        this.$route.$win.location.replace(newUrl);
+            next();
+        }).link(function(that, next) {
+            var newRt = new RouteBreaker(newUrl);
+            that.$route = {
+                fullPath: newRt.fullPath,
+                query: newRt.query,
+                path: newRt.path
+            };
+
+            next();
+        }).link(function(that, next) {
+            if(that.afterEach) {
+                that.afterEach(new RouteBreaker(newUrl), new RouteBreaker(oldUrl), next);
+            }else {
+                next();
+            }
+        }).run(this);
     },
     urlBuilder(obj) {
         var newUrl = '#',
-            currentFullPath = window.location.pathname;
+            newPath = '',
+            currentFullPath = window.location.hash.substring(1);
 
         var currPathArr = currentFullPath.split('/');
 
@@ -72,24 +104,27 @@ Router.prototype = {
             newPath = obj.path;
             var search = '';
 
-            Object.keys(obj.search).forEach(function(key, item) {
-                search += '&' + key + '=' + obj.search[key];
-            });
+            if(obj.search) {
+                Object.keys(obj.search).forEach(function(key, item) {
+                    search += '&' + key + '=' + obj.search[key];
+                });
+            };
 
-            newPath = newPath + (this.urlHasSearch(newPath) ? search : ('?' + search.substring(1)));
+            newPath = newPath + (this.urlHasSearch(newPath) ? search : ((search ? '?' : '') + search.substring(1)));
         } else {
             newPath = obj;
         };
 
         if (/^\//.test(newPath)) {
             relative_path = [newPath];
-        } else if(/^(\.\/)/.test(newPath)) {
-            relative_path = currPathArr.slice(0, -1);
-            relative_path.push(newPath.replace('./', ''));
         } else if (/^(\.\.\/)/.test(newPath)) {
             var matched_number = newPath.match(/(\.\.\/)/g).length;
-            relative_path = currPathArr.slice(0, -(matched_number));
+            relative_path = currPathArr.slice(0, -(matched_number + 1));
             relative_path.push(newPath.replace(/(\.\.\/)/g, ''));
+        } else {
+            //if(/^(\.\/)/.test(newPath))
+            relative_path = currPathArr.slice(0, -1);
+            relative_path.push(newPath.replace('./', ''));
         }
 
         newUrl += relative_path.join('/');
