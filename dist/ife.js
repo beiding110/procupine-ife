@@ -11344,63 +11344,9 @@ module.exports = {
     Chain
 }
 
-
-/***/ }),
-
-/***/ "./src/plugin/RouteBreaker.js":
-/*!************************************!*\
-  !*** ./src/plugin/RouteBreaker.js ***!
-  \************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var _ = __webpack_require__(/*! ../lib/pro_tool */ "./src/lib/pro_tool.js")
-
-function RouteBreaker(path, routers) {
-    this.init(path, routers)
+Object.prototype.loop = function(fun) {
+    Object.keys(this).forEach(fun)
 }
-
-RouteBreaker.prototype = {
-    init(path, routers) {
-        var breakArr = path.split('?');
-
-        this.fullPath = path;
-        this.path = breakArr[0];
-        this.query = this.queryBuilder(breakArr[1]);
-
-        this.routerMapper(this.path, routers)
-    },
-
-    queryBuilder(str) {
-        var queryStr = '',
-            queryArr = [],
-            query = {};
-
-        if(str) {
-            queryStr = str;
-            queryArr = queryStr.split('&');
-            queryArr.forEach(function(item) {
-                var arr = item.split('=');
-                query[arr[0]] = arr[1];
-            });
-        };
-
-        return query;
-    },
-
-    routerMapper(path, routers) {
-        if(routers) {
-            var routeItem = routers[this.path];
-            if(!routeItem) {
-                console.error('无法获取到对应的页面，请确认该路由路径与页面正确匹配！');
-            } else {
-                _.scrollin(routeItem, this);
-            }
-        }
-    }
-}
-
-module.exports = RouteBreaker
 
 
 /***/ }),
@@ -11412,8 +11358,9 @@ module.exports = RouteBreaker
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-var RouteBreaker = __webpack_require__(/*! ./RouteBreaker */ "./src/plugin/RouteBreaker.js")
+var routeBreaker = __webpack_require__(/*! ./routeBreaker */ "./src/plugin/routeBreaker.js")
 var _ = __webpack_require__(/*! ../lib/pro_tool */ "./src/lib/pro_tool.js")
+var routerPathMapper = __webpack_require__(/*! ./routerPathMapper */ "./src/plugin/routerPathMapper.js")
 
 function Router(obj) {
     this.init(obj);
@@ -11422,7 +11369,9 @@ function Router(obj) {
 Router.prototype = {
     init(obj) {
         var that = this;
+
         this.routes = this.routesPretreatment(obj.routes);
+        this.redAliPretreatment(this.routes);
 
         this.beforeEach = obj.beforeEach;
         this.afterEach = obj.afterEach;
@@ -11477,6 +11426,8 @@ Router.prototype = {
             fromRoute = {};
 
         (new _.Chain()).link(function(that, next) {
+
+            //获取当前location.hash值
             if(obj instanceof Location) {
                 oldUrl =  newUrl = obj.hash.replace('#', '');
             } else {
@@ -11484,38 +11435,71 @@ Router.prototype = {
                 newUrl = new URL(obj.newURL).hash.replace('#', '');
             };
 
-            toRoute = new RouteBreaker(newUrl, that.routes),
-            fromRoute = new RouteBreaker(oldUrl, that.routes);
+            next();
 
-            newUrl = that.routes ? toRoute.component : newUrl;
-
-            if(newUrl) {
-                next();
-            };
         }).link(function(that, next) {
+
+            //使用routeBreaker对当前hash值进行格式化
+            toRoute = routeBreaker(newUrl);
+            fromRoute = routeBreaker(oldUrl);
+
+            //使用routerPathMapper对当前hash值进行匹配，找到对应的heml文件，并将新的格式结果混入对象
+            _.scrollin(routerPathMapper(toRoute.path, that.routes), toRoute);
+            _.scrollin(routerPathMapper(fromRoute.path, that.routes), fromRoute);
+
+            next();
+
+        }).link(function(that, next) {
+
+            //判断是否存在重定向，是则进行重定向，别名路由不用处理
+            if(toRoute.redirect) {
+                that.$router.replace(toRoute.fullPath.replace(toRoute.path, toRoute.redirect));
+                return;
+            };
+
+            next();
+
+        }).link(function(that, next) {
+
+            //生成新的iframe需要跳转的路径
+            newUrl = that.routes ? toRoute.component : toRoute.fullPath;
+
+            next();
+
+        }).link(function(that, next) {
+
+            //进入路由守卫
             if(that.beforeEach) {
                 that.beforeEach(toRoute, fromRoute, next);
             }else {
                 next();
             }
+
         }).link(function(that, next) {
+
+            //给url加入时间戳并（不保存历史记录）跳转
+            if(!newUrl) {
+                return;
+            };
             srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
             that.$win.location.replace(srcUrl);
 
             next();
+
         }).link(function(that, next) {
-            var newRt = toRoute;
-            that.$route = {
-                fullPath: newRt.fullPath,
-                query: newRt.query,
-                path: newRt.path
-            };
+
+            //更新$route属性
+            that.$route = toRoute
 
             next();
+
         }).link(function(that, next) {
+
+            //进入后置钩子
             if(that.afterEach) {
                 that.afterEach(toRoute, fromRoute);
             }
+
         }).run(this);
     },
     urlBuilder(obj) {
@@ -11577,7 +11561,8 @@ Router.prototype = {
                 if(item.children && item.children.length > 0) {
                     deepLoop(item.children);
                 } else {
-                    res[parentPath] = item;
+                    res[parentPath] = res[parentPath] ? res[parentPath] : item;
+
                     parentPath = '';
                 };
             })
@@ -11590,10 +11575,102 @@ Router.prototype = {
         }
 
         return res;
+    },
+    redAliPretreatment(routesObj) {
+        if(!routesObj) return false;
+
+        routesObj.loop(function(key) {
+            if(routesObj[key].redirect) {
+                _.scrollin(routesObj[routesObj[key].redirect], routesObj[key]);
+            } else if (routesObj[key].alias) {
+                _.scrollin(routesObj[routesObj[key].alias], routesObj[key]);
+            }
+        });
     }
 }
 
 module.exports = Router
+
+
+/***/ }),
+
+/***/ "./src/plugin/routeBreaker.js":
+/*!************************************!*\
+  !*** ./src/plugin/routeBreaker.js ***!
+  \************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var _ = __webpack_require__(/*! ../lib/pro_tool */ "./src/lib/pro_tool.js")
+
+function routeBreaker(path) {
+    var breakArr = path.split('?'),
+        res = {};
+
+    res.fullPath = path;
+    res.path = breakArr[0];
+    res.query = queryBuilder(breakArr[1]);
+
+    // this.routerMapper(this.path, routers)
+
+    return res
+}
+
+function queryBuilder(str) {
+    var queryStr = '',
+        queryArr = [],
+        query = {};
+
+    if(str) {
+        queryStr = str;
+        queryArr = queryStr.split('&');
+        queryArr.forEach(function(item) {
+            var arr = item.split('=');
+            query[arr[0]] = arr[1];
+        });
+    };
+
+    return query;
+}
+
+// routerMapper(path, routers) {
+//     if(routers) {
+//         var routeItem = routers[this.path];
+//         if(!routeItem) {
+//             console.error('无法获取到对应的页面，请确认该路由路径与页面正确匹配！');
+//         } else {
+//             _.scrollin(routeItem, this);
+//         }
+//     }
+// }
+
+module.exports = routeBreaker
+
+
+/***/ }),
+
+/***/ "./src/plugin/routerPathMapper.js":
+/*!****************************************!*\
+  !*** ./src/plugin/routerPathMapper.js ***!
+  \****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+function routerPathMapper(path, routers) {
+    if(routers) {
+        var routeItem = routers[path];
+        if(!routeItem) {
+            console.error('无法获取到对应的页面，请确认该路由路径与页面正确匹配！');
+        } else {
+            //_.scrollin(routeItem, this);
+            return routeItem
+        }
+    };
+
+    return {};
+}
+
+module.exports = routerPathMapper
 
 
 /***/ }),

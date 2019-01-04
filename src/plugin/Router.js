@@ -1,5 +1,6 @@
-var RouteBreaker = require('./RouteBreaker')
+var routeBreaker = require('./routeBreaker')
 var _ = require('../lib/pro_tool')
+var routerPathMapper = require('./routerPathMapper')
 
 function Router(obj) {
     this.init(obj);
@@ -8,7 +9,9 @@ function Router(obj) {
 Router.prototype = {
     init(obj) {
         var that = this;
+
         this.routes = this.routesPretreatment(obj.routes);
+        this.redAliPretreatment(this.routes);
 
         this.beforeEach = obj.beforeEach;
         this.afterEach = obj.afterEach;
@@ -63,6 +66,8 @@ Router.prototype = {
             fromRoute = {};
 
         (new _.Chain()).link(function(that, next) {
+
+            //获取当前location.hash值
             if(obj instanceof Location) {
                 oldUrl =  newUrl = obj.hash.replace('#', '');
             } else {
@@ -70,38 +75,71 @@ Router.prototype = {
                 newUrl = new URL(obj.newURL).hash.replace('#', '');
             };
 
-            toRoute = new RouteBreaker(newUrl, that.routes),
-            fromRoute = new RouteBreaker(oldUrl, that.routes);
+            next();
 
-            newUrl = that.routes ? toRoute.component : newUrl;
-
-            if(newUrl) {
-                next();
-            };
         }).link(function(that, next) {
+
+            //使用routeBreaker对当前hash值进行格式化
+            toRoute = routeBreaker(newUrl);
+            fromRoute = routeBreaker(oldUrl);
+
+            //使用routerPathMapper对当前hash值进行匹配，找到对应的heml文件，并将新的格式结果混入对象
+            _.scrollin(routerPathMapper(toRoute.path, that.routes), toRoute);
+            _.scrollin(routerPathMapper(fromRoute.path, that.routes), fromRoute);
+
+            next();
+
+        }).link(function(that, next) {
+
+            //判断是否存在重定向，是则进行重定向，别名路由不用处理
+            if(toRoute.redirect) {
+                that.$router.replace(toRoute.fullPath.replace(toRoute.path, toRoute.redirect));
+                return;
+            };
+
+            next();
+
+        }).link(function(that, next) {
+
+            //生成新的iframe需要跳转的路径
+            newUrl = that.routes ? toRoute.component : toRoute.fullPath;
+
+            next();
+
+        }).link(function(that, next) {
+
+            //进入路由守卫
             if(that.beforeEach) {
                 that.beforeEach(toRoute, fromRoute, next);
             }else {
                 next();
             }
+
         }).link(function(that, next) {
+
+            //给url加入时间戳并（不保存历史记录）跳转
+            if(!newUrl) {
+                return;
+            };
             srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
             that.$win.location.replace(srcUrl);
 
             next();
+
         }).link(function(that, next) {
-            var newRt = toRoute;
-            that.$route = {
-                fullPath: newRt.fullPath,
-                query: newRt.query,
-                path: newRt.path
-            };
+
+            //更新$route属性
+            that.$route = toRoute
 
             next();
+
         }).link(function(that, next) {
+
+            //进入后置钩子
             if(that.afterEach) {
                 that.afterEach(toRoute, fromRoute);
             }
+
         }).run(this);
     },
     urlBuilder(obj) {
@@ -163,7 +201,8 @@ Router.prototype = {
                 if(item.children && item.children.length > 0) {
                     deepLoop(item.children);
                 } else {
-                    res[parentPath] = item;
+                    res[parentPath] = res[parentPath] ? res[parentPath] : item;
+
                     parentPath = '';
                 };
             })
@@ -176,6 +215,17 @@ Router.prototype = {
         }
 
         return res;
+    },
+    redAliPretreatment(routesObj) {
+        if(!routesObj) return false;
+
+        routesObj.loop(function(key) {
+            if(routesObj[key].redirect) {
+                _.scrollin(routesObj[routesObj[key].redirect], routesObj[key]);
+            } else if (routesObj[key].alias) {
+                _.scrollin(routesObj[routesObj[key].alias], routesObj[key]);
+            }
+        });
     }
 }
 

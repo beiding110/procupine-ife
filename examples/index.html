@@ -32,10 +32,23 @@
 			beforeEach(to, from, cb) {
 				console.log(to, from)
 				// document.title = to.path;
-				document.title = to.meta.title;
+				if(to.component) {
+					document.title = to.meta.title;
+				} else {
+					this.$router.replace('/404')
+				}
+
 				cb()
 			},
 			routes: [
+				{
+					path: '/',
+					redirect: '/frame2'
+				},
+				{
+					path: '/1',
+					alias: '/test/frame1'
+				},
 				{
 					path: '/test',
 					children: [
@@ -55,7 +68,7 @@
 					]
 				},
 				{
-					path: '/',
+					path: '/404',
 					component: '/examples/sub/404.html',
 					meta: {
 						title: '404'

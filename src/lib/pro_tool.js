@@ -25,3 +25,7 @@ module.exports = {
     },
     Chain
 }
+
+Object.prototype.loop = function(fun) {
+    Object.keys(this).forEach(fun)
+}
