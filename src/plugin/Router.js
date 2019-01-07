@@ -1,6 +1,7 @@
 var routeBreaker = require('./routeBreaker')
 var _ = require('../lib/pro_tool')
 var routerPathMapper = require('./routerPathMapper')
+var URLhack = require('./URLhack')
 
 function Router(obj) {
     this.init(obj);
@@ -68,11 +69,14 @@ Router.prototype = {
         (new _.Chain()).link(function(that, next) {
 
             //获取当前location.hash值
-            if(obj instanceof Location) {
+            if(obj instanceof Location || ('href' in obj)) {
                 oldUrl =  newUrl = obj.hash.replace('#', '');
             } else {
-                oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
-                newUrl = new URL(obj.newURL).hash.replace('#', '');
+                // oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
+                // newUrl = new URL(obj.newURL).hash.replace('#', '');
+                
+                oldUrl = new URLhack(obj.oldURL).hash.replace('#', ''),
+                newUrl = new URLhack(obj.newURL).hash.replace('#', '');
             };
 
             next();

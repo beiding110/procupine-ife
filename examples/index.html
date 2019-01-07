@@ -22,14 +22,14 @@
 				a: 1
 			},
 			watch: {
-				a(n, o) {
+				a: function(n, o) {
 					console.log(n, o)
 				}
 			},
-			mounted() {
+			mounted: function() {
 				// this.$router.replace('/examples/sub/frame-1.html');
 			},
-			beforeEach(to, from, cb) {
+			beforeEach: function(to, from, cb) {
 				console.log(to, from)
 				// document.title = to.path;
 				if(to.component) {
