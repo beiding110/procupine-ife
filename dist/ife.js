@@ -11275,7 +11275,7 @@ Router.prototype = {
                 // oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
                 // newUrl = new URL(obj.newURL).hash.replace('#', '');
 
-                oldUrl = new URLhack(obj.oldURL).hash.replace('#', ''), newUrl = new URLhack(obj.newURL).hash.replace('#', '');
+                oldUrl = new URLhack(obj.oldURL || obj.srcElement.location.hash).hash.replace('#', ''), newUrl = new URLhack(obj.newURL || obj.target.location.hash).hash.replace('#', '');
             };
 
             next();
@@ -11434,17 +11434,32 @@ module.exports = Router;
   !*** ./src/plugin/URLhack.js ***!
   \*******************************/
 /*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var _ = __webpack_require__(/*! ../lib/pro_tool */ "./src/lib/pro_tool.js");
+/***/ (function(module, exports) {
 
 function URLhack(href) {
-    var vdom = document.createElement('a');
-    vdom.href = href;
-    _.scrollin(vdom, this);
+    this.init(href);
 }
 
-module.exports - URLhack;
+URLhack.prototype = {
+    init: function init(href) {
+        var vdom = document.createElement('a');
+        vdom.href = href;
+
+        this.hash = vdom.hash;
+        this.pathname = vdom.pathname;
+        this.search = vdom.search;
+        this.href = vdom.href;
+        this.port = vdom.port;
+        this.host = vdom.host;
+        this.hostname = vdom.hostname;
+        this.origin = vdom.origin;
+        this.protocol = vdom.protocol;
+
+        vdom = null;
+    }
+};
+
+module.exports = URLhack;
 
 /***/ }),
 

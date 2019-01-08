@@ -74,9 +74,9 @@ Router.prototype = {
             } else {
                 // oldUrl = new URL(obj.oldURL).hash.replace('#', ''),
                 // newUrl = new URL(obj.newURL).hash.replace('#', '');
-                
-                oldUrl = new URLhack(obj.oldURL).hash.replace('#', ''),
-                newUrl = new URLhack(obj.newURL).hash.replace('#', '');
+
+                oldUrl = new URLhack(obj.oldURL || obj.srcElement.location.hash).hash.replace('#', ''),
+                newUrl = new URLhack(obj.newURL || obj.target.location.hash).hash.replace('#', '');
             };
 
             next();
