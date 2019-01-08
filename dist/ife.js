@@ -11225,6 +11225,9 @@ Router.prototype = {
             },
             reload: function reload() {
                 that.hashHandler(null, 'reload');
+            },
+            go: function go(length) {
+                history.go(length);
             }
         };
 

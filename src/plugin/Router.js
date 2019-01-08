@@ -26,6 +26,9 @@ Router.prototype = {
             },
             reload() {
                 that.hashHandler(null, 'reload');
+            },
+            go(length) {
+                history.go(length);
             }
         };
 
