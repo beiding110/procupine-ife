@@ -1,5 +1,5 @@
-var Router = require('./plugin/Router')
-var _ = require('./lib/pro_tool')
+var Router = require('./plugin/Router');
+var _ = require('./lib/pro_tool');
 
 function Ife(obj) {
     this.init(obj);

@@ -226,7 +226,7 @@ Router.prototype = {
     redAliPretreatment(routesObj) {
         if(!routesObj) return false;
 
-        routesObj.loop(function(key) {
+        Object.keys(routesObj).forEach(function(key) {
             if(routesObj[key].redirect) {
                 _.scrollin(routesObj[routesObj[key].redirect], routesObj[key]);
             } else if (routesObj[key].alias) {

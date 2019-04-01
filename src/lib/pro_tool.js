@@ -1,5 +1,9 @@
 var Chain = require('./Chain')
 
+// Object.prototype.loop = function(fun) {
+//     Object.keys(this).forEach(fun)
+// }
+
 module.exports = {
     mixin(from, to, cover) {
         from = JSON.parse(JSON.stringify(from || {}));
@@ -24,8 +28,4 @@ module.exports = {
         });
     },
     Chain
-}
-
-Object.prototype.loop = function(fun) {
-    Object.keys(this).forEach(fun)
 }

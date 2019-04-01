@@ -11155,6 +11155,10 @@ module.exports = Chain;
 
 var Chain = __webpack_require__(/*! ./Chain */ "./src/lib/Chain.js");
 
+// Object.prototype.loop = function(fun) {
+//     Object.keys(this).forEach(fun)
+// }
+
 module.exports = {
     mixin: function mixin(from, to, cover) {
         from = JSON.parse(JSON.stringify(from || {}));
@@ -11180,10 +11184,6 @@ module.exports = {
     },
 
     Chain: Chain
-};
-
-Object.prototype.loop = function (fun) {
-    Object.keys(this).forEach(fun);
 };
 
 /***/ }),
@@ -11418,7 +11418,7 @@ Router.prototype = {
     redAliPretreatment: function redAliPretreatment(routesObj) {
         if (!routesObj) return false;
 
-        routesObj.loop(function (key) {
+        Object.keys(routesObj).forEach(function (key) {
             if (routesObj[key].redirect) {
                 _.scrollin(routesObj[routesObj[key].redirect], routesObj[key]);
             } else if (routesObj[key].alias) {
