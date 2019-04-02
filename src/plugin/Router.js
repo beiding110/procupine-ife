@@ -11,6 +11,7 @@ Router.prototype = {
     init(obj) {
         var that = this;
 
+        this.$settings = obj;
         this.routes = this.routesPretreatment(obj.routes);
         this.redAliPretreatment(this.routes);
 
@@ -32,12 +33,15 @@ Router.prototype = {
             }
         };
 
-        this.$win = document.querySelector(obj.el).contentWindow;
+        this.rebindWin();
 
         if(!window.location.hash) this.$router.replace('/');
         else this.routeHandler(window.location);
 
         this.initRouteObserver();
+    },
+    rebindWin() {
+        this.$win = document.querySelector(this.$settings.el).contentWindow;
     },
     hashHandler(obj, type) {
         var newUrl = obj ? this.urlBuilder(obj) : '',
@@ -68,6 +72,8 @@ Router.prototype = {
             srcUrl = '',
             toRoute = {},
             fromRoute = {};
+
+        this.rebindWin();
 
         (new _.Chain()).link(function(that, next) {
 
