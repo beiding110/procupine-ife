@@ -49,10 +49,18 @@ Router.prototype = {
 
         var swicthObj = {
             push() {
-                window.top.location.assign('' + newUrl);
+                var location = window.location.href,
+                    hash = window.location.hash;
+
+                location = location.replace(hash, newUrl);
+                window.top.location.assign(location);
             },
             replace() {
-                window.top.location.replace('' + newUrl);
+                var location = window.location.href,
+                    hash = window.location.hash;
+
+                location = location.replace(hash, newUrl);
+                window.top.location.replace(location);
             },
             reload() {
                 that.$win.location.reload();

@@ -27,6 +27,8 @@ Ife.prototype = {
 
     extend(top, obj) {
         this.$setting = obj;
+        obj.data = obj.data || {};
+        top.$data = top.$data || {};
 
         //顶部页面库补充
         this.$data = top.$data = _.mixin(obj.data, top.$data);
@@ -46,6 +48,8 @@ Ife.prototype = {
     },
 
     initObserve(data) {
+        if(!data) return;
+
         Object.keys(data).forEach((key, index) => {
             if(!this[key]) {
                 Object.defineProperty(this, key, {

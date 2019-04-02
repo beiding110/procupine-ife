@@ -11013,6 +11013,8 @@ Ife.prototype = {
     },
     extend: function extend(top, obj) {
         this.$setting = obj;
+        obj.data = obj.data || {};
+        top.$data = top.$data || {};
 
         //顶部页面库补充
         this.$data = top.$data = _.mixin(obj.data, top.$data);
@@ -11032,6 +11034,8 @@ Ife.prototype = {
     },
     initObserve: function initObserve(data) {
         var _this = this;
+
+        if (!data) return;
 
         Object.keys(data).forEach(function (key, index) {
             if (!_this[key]) {
@@ -11210,6 +11214,7 @@ Router.prototype = {
     init: function init(obj) {
         var that = this;
 
+        this.$settings = obj;
         this.routes = this.routesPretreatment(obj.routes);
         this.redAliPretreatment(this.routes);
 
@@ -11231,11 +11236,14 @@ Router.prototype = {
             }
         };
 
-        this.$win = document.querySelector(obj.el).contentWindow;
+        this.rebindWin();
 
         if (!window.location.hash) this.$router.replace('/');else this.routeHandler(window.location);
 
         this.initRouteObserver();
+    },
+    rebindWin: function rebindWin() {
+        this.$win = document.querySelector(this.$settings.el).contentWindow;
     },
     hashHandler: function hashHandler(obj, type) {
         var newUrl = obj ? this.urlBuilder(obj) : '',
@@ -11243,10 +11251,18 @@ Router.prototype = {
 
         var swicthObj = {
             push: function push() {
-                window.top.location.assign('' + newUrl);
+                var location = window.location.href,
+                    hash = window.location.hash;
+
+                location = location.replace(hash, newUrl);
+                window.top.location.assign(location);
             },
             replace: function replace() {
-                window.top.location.replace('' + newUrl);
+                var location = window.location.href,
+                    hash = window.location.hash;
+
+                location = location.replace(hash, newUrl);
+                window.top.location.replace(location);
             },
             reload: function reload() {
                 that.$win.location.reload();
@@ -11268,6 +11284,8 @@ Router.prototype = {
             srcUrl = '',
             toRoute = {},
             fromRoute = {};
+
+        this.rebindWin();
 
         new _.Chain().link(function (that, next) {
 
