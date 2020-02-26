@@ -27,7 +27,12 @@
 				}
 			},
 			mounted: function() {
-				// this.$router.replace('/examples/sub/frame-1.html');
+				// this.$router.replace({
+				// 	path: '/examples/sub/frame-1.html',
+				// 	search: {
+				// 		name: '123'
+				// 	}
+				// });
 			},
 			beforeEach: function(to, from, cb) {
 				console.log(to, from)

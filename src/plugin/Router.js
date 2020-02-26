@@ -70,11 +70,61 @@ Router.prototype = {
         swicthObj[type]();
     },
     initRouteObserver() {
+        var changeOuterUrlOnly = false, //仅修改外部路由地址，不更新iframe内部视图
+            isHashAction = false; //是方法改变的路由，而非iframe内部自己改变的路由
+
+        if(!this.$settings.routes) {
+            var oldPath = _.clone(this.$route);
+        };
+
         window.addEventListener('hashchange', (e) => {
+            // console.log('hash刷新')
+            if(changeOuterUrlOnly) {
+                changeOuterUrlOnly = false;
+                // console.log(changeOuterUrlOnly)
+                return;
+            };
+            // console.log('判定为hash')
+            isHashAction = true;
+            // console.log('isHashAction' + isHashAction)
             this.routeHandler(e);
-        })
+
+            if(!this.$settings.routes) {
+                oldPath = routeBreaker(this.$route.fullPath)
+            };
+        });
+
+        if(!!this.$settings.routes) return;
+        document.querySelector(this.$settings.el).addEventListener('load', (e) => {
+            // console.log('iframe内部刷新')
+            if(isHashAction) {
+                isHashAction = false;
+                // console.log('isHashAction' + isHashAction)
+                return;
+            };
+            // console.log('判定为iframe')
+            var newUrl = (this.$win.location.pathname + this.$win.location.search);
+            var newPath = routeBreaker(newUrl);
+            if(oldPath.path !== newPath.path) {
+                var oldSearch = _.clone(oldPath.query),
+                    newSearch = _.clone(newPath.query);
+
+                delete oldSearch.ts;
+                delete newSearch.ts;
+
+                if(oldSearch !== newSearch) {
+                    changeOuterUrlOnly = true;
+                    // console.log(changeOuterUrlOnly)
+                    this.$router.replace({
+                        path: newPath.path,
+                        search: newSearch
+                    });
+                    oldPath = newPath;
+                };
+            };
+        });
     },
-    routeHandler(obj) {
+    routeHandler(obj, changeUrlOnly) {
         var oldUrl = '',
             newURL = '',
             srcUrl = '',
@@ -138,14 +188,18 @@ Router.prototype = {
 
         }).link(function(that, next) {
 
-            //给url加入时间戳并（不保存历史记录）跳转
-            if(!newUrl) {
-                return;
-            };
-            srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
-            that.$win.location.replace(srcUrl);
+            if(changeUrlOnly) {
+                next();
+            } else {
+                //给url加入时间戳并（不保存历史记录）跳转
+                if(!newUrl) {
+                    return;
+                };
+                srcUrl = newUrl + (that.urlHasSearch(newUrl) ? '&' : '?') + 'ts=' + (new Date()).getTime();
+                that.$win.location.replace(srcUrl);
 
-            next();
+                next();
+            };
 
         }).link(function(that, next) {
 
