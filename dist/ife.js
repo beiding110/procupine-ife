@@ -11282,7 +11282,7 @@ Router.prototype = {
         isHashAction = false; //是方法改变的路由，而非iframe内部自己改变的路由
 
         if (!this.$settings.routes) {
-            var oldPath = _.clone(this.$route);
+            var oldPath = _.clone(this.$route || {});
         };
 
         window.addEventListener('hashchange', function (e) {
@@ -11304,7 +11304,8 @@ Router.prototype = {
 
         if (!!this.$settings.routes) return;
         document.querySelector(this.$settings.el).addEventListener('load', function (e) {
-            // console.log('iframe内部刷新')
+            console.log(e);
+            // console.log('iframe内部刷新');
             if (isHashAction) {
                 isHashAction = false;
                 // console.log('isHashAction' + isHashAction)
